@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:tester/pdf/invoice_service.dart';
 import 'package:tester/pdf/model.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+// void main() {
+//   runApp(const MyApp());
+// }
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -102,11 +102,11 @@ class _HomePageState extends State<HomePage> {
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [const Text("VAT"), Text("${getVat()} ₹")],
+              children: [const Text("VAT"), Text("${getVat()} €")],
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [const Text("Total"), Text("${getTotal()} ₹")],
+              children: [const Text("Total"), Text("${getTotal()} €")],
             ),
             ElevatedButton(
               onPressed: () async {

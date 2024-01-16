@@ -42,8 +42,11 @@ dependencies:
   # baseflow_plugin_template: ^2.1.2
   # qr_flutter: ^4.1.0
   # crop_your_image: ^0.7.5
-  contacts_service: ^0.6.3
-  permission_handler: ^11.1.0
+  # contacts_service: ^0.6.3
+  # permission_handler: ^11.1.0
+  pdf: ^3.10.7
+  path_provider: ^2.1.2
+  open_document: ^1.0.7
 
 dev_dependencies:
   flutter_test:
