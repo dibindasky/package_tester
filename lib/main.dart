@@ -1,136 +1,146 @@
-import 'dart:typed_data';
+import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:nfc_manager/nfc_manager.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:tester/util/validators.dart';
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
-}
+void main() => runApp(const MaterialApp(home: MyHome()));
 
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
-
-  @override
-  State<StatefulWidget> createState() => MyAppState();
-}
-
-class MyAppState extends State<MyApp> {
-  ValueNotifier<dynamic> result = ValueNotifier(null);
+class MyHome extends StatelessWidget {
+  const MyHome({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: const Text('NfcManager Plugin Example')),
-        body: SafeArea(
-          child: FutureBuilder<bool>(
-            future: NfcManager.instance.isAvailable(),
-            builder: (context, ss) => ss.data != true
-                ? Center(child: Text('NfcManager.isAvailable(): ${ss.data}'))
-                : Flex(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    direction: Axis.vertical,
-                    children: [
-                      Flexible(
-                        flex: 2,
-                        child: Container(
-                          margin: const EdgeInsets.all(4),
-                          constraints: const BoxConstraints.expand(),
-                          decoration: BoxDecoration(border: Border.all()),
-                          child: SingleChildScrollView(
-                            child: ValueListenableBuilder<dynamic>(
-                              valueListenable: result,
-                              builder: (context, value, _) =>
-                                  Text('${value ?? ''}'),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Flexible(
-                        flex: 3,
-                        child: GridView.count(
-                          padding: const EdgeInsets.all(4),
-                          crossAxisCount: 2,
-                          childAspectRatio: 4,
-                          crossAxisSpacing: 4,
-                          mainAxisSpacing: 4,
-                          children: [
-                            ElevatedButton(
-                                onPressed: _tagRead,
-                                child: const Text('Tag Read')),
-                            ElevatedButton(
-                                onPressed: _ndefWrite,
-                                child: const Text('Ndef Write')),
-                            ElevatedButton(
-                                onPressed: _ndefWriteLock,
-                                child: const Text('Ndef Write Lock')),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Image to Text')),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(
+              builder: (context) => const TextReaderExample(),
+            ));
+          },
+          child: const Text('get text from image'),
+        ),
+      ),
+    );
+  }
+}
+
+class TextReaderExample extends StatefulWidget {
+  const TextReaderExample({super.key});
+
+  @override
+  State<TextReaderExample> createState() => _TextReaderExampleState();
+}
+
+class _TextReaderExampleState extends State<TextReaderExample> {
+  File? image;
+  String text = '';
+  List<String> phones = [];
+  List<String> emails = [];
+  List<String> websites = [];
+  String address = '';
+  List<String> names = [];
+  List<String> unKnown = [];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('image to text'),
+      ),
+      body: SizedBox(
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () async {
+                final img =
+                    await ImagePicker().pickImage(source: ImageSource.camera);
+                if (img != null) {
+                  setState(() {
+                    image = File(img.path);
+                  });
+                }
+              },
+              child: const Text('camera'),
+            ),
+            const SizedBox(
+              height: 20,
+            ),
+            CircleAvatar(
+              radius: 50,
+              backgroundImage: image != null ? FileImage(image!) : null,
+            ),
+            const SizedBox(
+              height: 20,
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (image == null) return;
+                final inputImage = InputImage.fromFile(image!);
+                final textRecognizer =
+                    TextRecognizer(script: TextRecognitionScript.latin);
+                final RecognizedText recognizedText =
+                    await textRecognizer.processImage(inputImage);
+                String txt = recognizedText.text;
+                setState(() {
+                  text = txt;
+                });
+                print('check web vallidation');
+                print(isValidWebsite('www.oyorooms.com'));
+                for (TextBlock block in recognizedText.blocks) {
+                  final Rect rect = block.boundingBox;
+                  final List<Point<int>> cornerPoints = block.cornerPoints;
+                  final String text = block.text;
+                  final List<String> languages = block.recognizedLanguages;
+
+                  for (TextLine line in block.lines) {
+                    // Same getters as TextBlock
+                    addToDetail(line.text);
+                    print('line --------- ${line.text}');
+                    for (TextElement element in line.elements) {
+                      // Same getters as TextBlock
+                      addToDetail(element.text);
+                    }
+                  }
+                }
+              },
+              child: const Text('process image'),
+            ),
+            const SizedBox(
+              height: 20,
+            ),
+            const Text('Extracted txt will display here'),
+            Text('Phone  $phones'),
+            Text('Email  $emails'),
+            Text('Websites  $websites'),
+            Text('Address  $address'),
+            Text('Names  $names'),
+            Text('UnKnown  $unKnown'),
+          ],
         ),
       ),
     );
   }
 
-  void _tagRead() {
-    NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-      result.value = tag.data;
-      NfcManager.instance.stopSession();
-    });
-  }
-
-  void _ndefWrite() {
-    NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-      var ndef = Ndef.from(tag);
-      if (ndef == null || !ndef.isWritable) {
-        result.value = 'Tag is not ndef writable';
-        NfcManager.instance.stopSession(errorMessage: result.value);
-        return;
-      }
-
-      NdefMessage message = NdefMessage([
-        NdefRecord.createText('Hello World!'),
-        NdefRecord.createUri(Uri.parse('https://flutter.dev')),
-        NdefRecord.createMime(
-            'text/plain', Uint8List.fromList('Hello'.codeUnits)),
-        NdefRecord.createExternal(
-            'com.example', 'mytype', Uint8List.fromList('mydata'.codeUnits)),
-      ]);
-
-      try {
-        await ndef.write(message);
-        result.value = 'Success to "Ndef Write"';
-        NfcManager.instance.stopSession();
-      } catch (e) {
-        result.value = e;
-        NfcManager.instance.stopSession(errorMessage: result.value.toString());
-        return;
-      }
-    });
-  }
-
-  void _ndefWriteLock() {
-    NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-      var ndef = Ndef.from(tag);
-      if (ndef == null) {
-        result.value = 'Tag is not ndef';
-        NfcManager.instance.stopSession(errorMessage: result.value.toString());
-        return;
-      }
-
-      try {
-        await ndef.writeLock();
-        result.value = 'Success to "Ndef Write Lock"';
-        NfcManager.instance.stopSession();
-      } catch (e) {
-        result.value = e;
-        NfcManager.instance.stopSession(errorMessage: result.value.toString());
-        return;
-      }
-    });
+  addToDetail(String input) {
+    if (isValidPhoneNumber(input) ||
+        (input.contains('+91') && input.length > 10)) {
+      phones.add(input);
+    } else if (isValidWebsite(input)) {
+      websites.add(input);
+    } else if (isValidEmail(input)) {
+      emails.add(input);
+    } else if (isValidName(input)) {
+      names.add(input);
+    } else {
+      unKnown.add(input);
+    }
   }
 }
