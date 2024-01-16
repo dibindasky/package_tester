@@ -34,7 +34,8 @@ class PdfInvoiceService {
     return pdf.save();
   }
 
-  Future<Uint8List> createInvoice(List<Product> soldProducts) async {
+  Future<Uint8List> createInvoice(List<Product> soldProducts,String? fileImage) async {
+    const assetImage = "assets/images/home_offer.png";
     final pdf = pw.Document();
 
     final List<CustomRow> elements = [
@@ -69,7 +70,7 @@ class PdfInvoiceService {
         "${(double.parse(getSubTotal(soldProducts)) + double.parse(getVatTotal(soldProducts))).toStringAsFixed(2)} EUR",
       )
     ];
-    final image = (await rootBundle.load("assets/images/home_offer.png"))
+    final image =fileImage!=null? await fileToUint8List(fileImage):(await rootBundle.load(assetImage))
         .buffer
         .asUint8List();
     pdf.addPage(
@@ -162,6 +163,24 @@ class PdfInvoiceService {
     print('file saved in file');
     await OpenDocument.openDocument(filePath: filePath);
   }
+
+  
+Future<Uint8List> fileToUint8List(String filePath) async {
+  File file = File(filePath);
+
+  if (!await file.exists()) {
+    // Handle the case where the file does not exist.
+    return Uint8List(0);
+  }
+
+  // Read the file as bytes.
+  List<int> bytes = await file.readAsBytes();
+
+  // Convert the list of integers to a Uint8List.
+  Uint8List uint8List = Uint8List.fromList(bytes);
+
+  return uint8List;
+}
 
   String getSubTotal(List<Product> products) {
     return products

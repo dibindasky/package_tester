@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:tester/pdf/invoice_service.dart';
 import 'package:tester/pdf/model.dart';
 
@@ -38,6 +41,7 @@ class _HomePageState extends State<HomePage> {
     Product("Hamburger", 5.99, 7),
   ];
   int number = 0;
+  String? fileImagePath;
 
   @override
   Widget build(BuildContext context) {
@@ -60,8 +64,10 @@ class _HomePageState extends State<HomePage> {
                       Expanded(
                         child: Column(
                           children: [
-                            Text("Price: ${currentProduct.price.toStringAsFixed(2)} €"),
-                            Text("VAT ${currentProduct.vatInPercent.toStringAsFixed(0)} %")
+                            Text(
+                                "Price: ${currentProduct.price.toStringAsFixed(2)} €"),
+                            Text(
+                                "VAT ${currentProduct.vatInPercent.toStringAsFixed(0)} %")
                           ],
                           crossAxisAlignment: CrossAxisAlignment.center,
                         ),
@@ -102,15 +108,19 @@ class _HomePageState extends State<HomePage> {
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [const Text("VAT"), Text("${getVat()} €")],
+              children: [const Text("VAT"), Text("${getVat()} ₹")],
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [const Text("Total"), Text("${getTotal()} €")],
+              children: [const Text("Total"), Text("${getTotal()} ₹")],
             ),
             ElevatedButton(
               onPressed: () async {
-                final data = await service.createInvoice(products);
+                fileImagePath = File(await ImagePicker()
+                        .pickImage(source: ImageSource.gallery)
+                        .then((value) => value!.path))
+                    .path;
+                final data = await service.createInvoice(products,fileImagePath);
                 service.savePdfFile("invoice_$number", data);
                 number++;
               },
@@ -123,13 +133,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   getTotal() => products
-      .fold(0.0, (double prev, element) => prev + (element.price * element.amount))
+      .fold(0.0,
+          (double prev, element) => prev + (element.price * element.amount))
       .toStringAsFixed(2);
 
   getVat() => products
       .fold(
           0.0,
           (double prev, element) =>
-              prev + (element.price / 100 * element.vatInPercent * element.amount))
+              prev +
+              (element.price / 100 * element.vatInPercent * element.amount))
       .toStringAsFixed(2);
 }
